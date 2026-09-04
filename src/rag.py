@@ -1,6 +1,7 @@
 """Retrieve relevant papers from Elasticsearch (hybrid BM25 + kNN) and
 answer a question about them using a local LLM via LangChain/Ollama."""
 
+import re
 import sys
 
 from elasticsearch import Elasticsearch
@@ -22,6 +23,43 @@ Question: {question}
 
 Answer:"""
 )
+
+# Matches an ArXiv ID like "2401.12345" or "2401.12345v2", whether bare or
+# embedded in an arxiv.org URL.
+ARXIV_ID_RE = re.compile(r"(\d{4}\.\d{4,5})(v\d+)?")
+
+
+def extract_arxiv_id(text: str) -> str | None:
+    match = ARXIV_ID_RE.search(text)
+    return match.group(0) if match else None
+
+
+def find_by_id(es: Elasticsearch, arxiv_id: str) -> dict | None:
+    """Look up a specific paper by ArXiv ID, tolerant of a missing/different
+    version suffix (the stored _id includes the version, e.g. '...v1')."""
+    bare_id = ARXIV_ID_RE.match(arxiv_id).group(1)
+    resp = es.search(
+        index=config.ES_INDEX,
+        size=1,
+        query={"wildcard": {"arxiv_id": f"{bare_id}*"}},
+    )
+    hits = resp["hits"]["hits"]
+    return hits[0]["_source"] if hits else None
+
+
+def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
+    resp = es.search(
+        index=config.ES_INDEX,
+        size=0,
+        aggs={
+            "oldest": {"min": {"field": "published"}},
+            "newest": {"max": {"field": "published"}},
+        },
+    )
+    count = resp["hits"]["total"]["value"]
+    oldest = resp["aggregations"]["oldest"]["value_as_string"]
+    newest = resp["aggregations"]["newest"]["value_as_string"]
+    return oldest, newest, count
 
 
 def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int = 5):
@@ -48,8 +86,22 @@ def format_context(papers: list[dict]) -> str:
 
 def ask(question: str) -> str:
     es = Elasticsearch(config.ES_URL)
-    embed_model = SentenceTransformer(config.EMBEDDING_MODEL)
-    papers = search(es, embed_model, question)
+
+    arxiv_id = extract_arxiv_id(question)
+    if arxiv_id:
+        paper = find_by_id(es, arxiv_id)
+        if paper is None:
+            oldest, newest, count = corpus_date_range(es)
+            return (
+                f"Paper {arxiv_id} is not in the indexed corpus.\n\n"
+                f"The index currently holds {count} papers spanning "
+                f"{oldest} to {newest}. You can view the paper directly at "
+                f"https://arxiv.org/abs/{arxiv_id}."
+            )
+        papers = [paper]
+    else:
+        embed_model = SentenceTransformer(config.EMBEDDING_MODEL)
+        papers = search(es, embed_model, question)
 
     if not papers:
         return "No indexed papers matched this question. Have you run `python -m src.ingest` yet?"
