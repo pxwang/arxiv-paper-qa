@@ -68,6 +68,18 @@ python -m src.ingest
 python -m src.rag "What are recent approaches to reducing LLM hallucination?"
 ```
 
+### Caching
+
+Fetched papers are cached to `data/papers.jsonl`. Re-running `python -m
+src.ingest` reuses that cache instead of re-hitting the ArXiv API — handy
+when re-indexing after changing the embedding model or index mapping, since
+a full ~18-month fetch can take over an hour due to ArXiv's API rate limit.
+Pass `--refresh` to force a fresh fetch:
+
+```bash
+python -m src.ingest --refresh
+```
+
 ## Project layout
 
 ```text
@@ -82,12 +94,23 @@ requirements.txt
 
 ## Notes on scale
 
-Scoped to ~1-2 years of `cs.AI`/`cs.LG` (tens of thousands of papers, not the
-full ~2.7M-paper ArXiv corpus) — this keeps the Elasticsearch HNSW vector
-index and local embedding step comfortably within a 16GB machine. See the
-project's design discussion for the reasoning: indexing raw metadata is
-cheap, but dense-vector HNSW overhead scales fast, so an unscoped full-corpus
-index is not a good fit for a local single-node setup.
+Scoped to `cs.AI`/`cs.LG` rather than the full ~2.7M-paper ArXiv corpus.
+Observed throughput is ~270 papers/day across both categories combined, so
+18 months is roughly 150,000 papers. At 384-dim embeddings
+(`bge-small-en-v1.5`), that's small in practice:
+
+| Component | Estimate |
+|---|---|
+| Raw vectors (384 dims × 4 bytes × 150k docs) | ~230 MB |
+| HNSW graph overhead (default `m=16`) | ~20 MB |
+| Text (title/abstract, indexed + stored) | ~600 MB - 1 GB |
+| **Total Elasticsearch data size** | **~1-1.5 GB** |
+
+Comfortably within the 2GB JVM heap in `docker-compose.yml`, with room to
+spare on a 16GB machine even with Ollama's model loaded. The actual
+bottleneck for a full 18-month ingest is ArXiv's API rate limit (~75
+minutes), not memory — see the Caching section above for avoiding repeat
+fetches.
 
 ## Status
 
