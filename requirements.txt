@@ -1,0 +1,6 @@
+elasticsearch>=8.15,<9
+arxiv>=2.1
+sentence-transformers>=3.0
+langchain-core>=0.3
+langchain-ollama>=0.2
+python-dotenv>=1.0
