@@ -7,6 +7,11 @@ the client's built-in per-page retries). To stay well clear of that, the
 date window is split into small chunks (default 14 days, ~1500-4000 papers
 each for cs.AI/cs.LG) and fetched separately.
 
+Sustained fetching over many chunks can also trigger HTTP 429 (rate
+limiting) from the API itself, independent of the pagination-depth issue.
+Chunk-level retries back off with an increasing pause (30s, 60s, 90s) to
+give an active rate limit time to clear before retrying.
+
 Fetched papers are appended to data/papers.jsonl as they come in, and
 completed date chunks are recorded in data/ingest_state.json. Re-running
 this script skips chunks already completed, so an interrupted or partially
@@ -18,6 +23,7 @@ import argparse
 import datetime
 import json
 import pathlib
+import time
 
 import arxiv
 from elasticsearch import Elasticsearch, helpers
@@ -31,6 +37,7 @@ STATE_FILE = DATA_DIR / "ingest_state.json"
 
 CHUNK_DAYS = 14
 CHUNK_RETRIES = 3
+CHUNK_RETRY_BACKOFF_SECONDS = 30
 
 INDEX_MAPPING = {
     "mappings": {
@@ -128,11 +135,16 @@ def load_or_fetch_papers(refresh: bool = False) -> list[dict]:
                     print(f"  {key}: {count} papers")
                     completed.add(key)
                     save_state(completed)
+                    time.sleep(5)  # brief courtesy pause between chunks
                     break
                 except Exception as e:
                     print(f"  {key}: attempt {attempt}/{CHUNK_RETRIES} failed ({e})")
                     if attempt == CHUNK_RETRIES:
                         failed.append(key)
+                    else:
+                        pause = CHUNK_RETRY_BACKOFF_SECONDS * attempt
+                        print(f"  {key}: backing off {pause}s before retry")
+                        time.sleep(pause)
 
     if failed:
         print(
