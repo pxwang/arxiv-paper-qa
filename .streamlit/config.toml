@@ -1,0 +1,7 @@
+[server]
+# The default watcher walks every imported module's file paths (for
+# hot-reload on save) and trips over transformers' optional torchvision-only
+# submodules, which aren't installed since this app never touches them -
+# harmless but noisy. "poll" avoids that module-tree walk while keeping
+# hot-reload on save.
+fileWatcherType = "poll"
