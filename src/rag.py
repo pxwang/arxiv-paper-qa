@@ -120,6 +120,11 @@ def build_llm() -> ChatOllama:
         model=config.OLLAMA_MODEL,
         base_url=config.OLLAMA_BASE_URL,
         client_kwargs={"timeout": config.OLLAMA_TIMEOUT_SECONDS},
+        # Ollama's defaults (temperature 0.8, top_p 0.9, top_k 40) are tuned
+        # for varied, natural-sounding chat, not for faithfully reporting
+        # facts from retrieved context. temperature=0 makes sampling always
+        # pick the most-likely token, which is what a RAG answer should do.
+        temperature=0,
     )
 
 
