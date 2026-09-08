@@ -63,11 +63,21 @@ def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
 
 
 def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int = 5):
+    """Retrieve top-k via BM25 and top-k via kNN independently, then merge
+    the two lists (BM25 first, then any kNN hits not already included).
+    BM25 and kNN scores aren't on comparable scales, so rather than summing
+    them into one ranking, each method's own top-k stands on its own and
+    duplicates (by arxiv_id) are dropped."""
     vector = model.encode(question, normalize_embeddings=True).tolist()
-    resp = es.search(
+
+    bm25_resp = es.search(
         index=config.ES_INDEX,
         size=k,
         query={"match": {"abstract": question}},
+    )
+    knn_resp = es.search(
+        index=config.ES_INDEX,
+        size=k,
         knn={
             "field": "abstract_vector",
             "query_vector": vector,
@@ -75,7 +85,16 @@ def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int 
             "num_candidates": 50,
         },
     )
-    return [hit["_source"] for hit in resp["hits"]["hits"]]
+
+    seen_ids = set()
+    papers = []
+    for hit in bm25_resp["hits"]["hits"] + knn_resp["hits"]["hits"]:
+        paper = hit["_source"]
+        if paper["arxiv_id"] in seen_ids:
+            continue
+        seen_ids.add(paper["arxiv_id"])
+        papers.append(paper)
+    return papers
 
 
 def format_context(papers: list[dict]) -> str:

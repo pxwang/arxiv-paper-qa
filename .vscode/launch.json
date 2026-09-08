@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "rag: Gaussian Approximation query",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.rag",
+      "args": [
+        "can you find paper about Gaussian Approximation and Tail Bounds? and authors list"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
