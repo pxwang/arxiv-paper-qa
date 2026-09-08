@@ -1,8 +1,7 @@
 from unittest.mock import MagicMock
 
-from tests.fakes import FakeLLM
-
 from src.rag import ask, corpus_date_range, extract_arxiv_id, find_by_id, format_context, search
+from tests.fakes import FakeLLM
 
 
 class TestExtractArxivId:

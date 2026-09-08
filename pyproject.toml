@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.ruff.lint.per-file-ignores]
+# These two deliberately import src.config before third-party libraries, so
+# HF_HUB_OFFLINE is set before huggingface_hub reads it at import time. Don't
+# let isort "fix" that back to alphabetical/stdlib-first order.
+"src/ingest.py" = ["I001"]
+"src/rag.py" = ["I001"]

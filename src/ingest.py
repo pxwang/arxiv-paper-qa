@@ -60,7 +60,9 @@ INDEX_MAPPING = {
 }
 
 
-def date_chunks(months_back: int, chunk_days: int = CHUNK_DAYS) -> list[tuple[datetime.date, datetime.date]]:
+def date_chunks(
+    months_back: int, chunk_days: int = CHUNK_DAYS
+) -> list[tuple[datetime.date, datetime.date]]:
     end = datetime.date.today()
     start = end - datetime.timedelta(days=months_back * 30)
     chunks = []
@@ -188,7 +190,7 @@ def _flush_batch(es: Elasticsearch, model: SentenceTransformer, batch: list[dict
             "_id": paper["arxiv_id"],
             "_source": {**paper, "abstract_vector": vector.tolist()},
         }
-        for paper, vector in zip(batch, vectors)
+        for paper, vector in zip(batch, vectors, strict=True)
     ]
     helpers.bulk(es, actions)
 

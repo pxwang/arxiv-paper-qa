@@ -1,4 +1,5 @@
 import datetime
+from itertools import pairwise
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -16,7 +17,7 @@ class TestDateChunks:
         today = datetime.date.today()
 
         assert chunks[-1][1] == today
-        for (_, end), (next_start, _) in zip(chunks, chunks[1:]):
+        for (_, end), (next_start, _) in pairwise(chunks):
             assert end + datetime.timedelta(days=1) == next_start
 
     def test_zero_months_back_gives_single_one_day_chunk(self):
@@ -85,7 +86,9 @@ class TestLoadOrFetchPapers:
         assert len(second) == 1  # still just the cached paper
         assert calls["n"] == 1  # fetch_chunk not called again - chunk already completed
 
-    def test_retries_then_gives_up_without_marking_chunk_completed(self, tmp_path, monkeypatch, capsys):
+    def test_retries_then_gives_up_without_marking_chunk_completed(
+        self, tmp_path, monkeypatch, capsys
+    ):
         self._patch_data_paths(tmp_path, monkeypatch)
         monkeypatch.setattr(ingest, "CHUNK_RETRIES", 2)
         attempts = {"n": 0}

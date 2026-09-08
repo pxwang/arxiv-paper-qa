@@ -120,6 +120,19 @@ exactly this reason. Covers the BM25+kNN merge/dedup logic, the ArXiv-ID
 direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume behavior,
 and a couple of past regressions (empty-index crash, vector source field).
 
+## Lint
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+```
+
+Config in `pyproject.toml`. `src/ingest.py` and `src/rag.py` are exempted
+from import-sort ordering (`I001`) since both deliberately import
+`src.config` before third-party libraries, so `HF_HUB_OFFLINE` is set
+before `huggingface_hub` reads it at import time - isort's default
+stdlib/third-party/first-party ordering would silently undo that fix.
+
 ## Project layout
 
 ```text
@@ -131,7 +144,8 @@ app.py              - Streamlit web UI over the rag.py pipeline
 tests/              - pytest suite (mocked ES/embedding model/LLM)
 docker-compose.yml  - single-node Elasticsearch for local dev
 requirements.txt
-requirements-dev.txt - adds pytest
+requirements-dev.txt - adds pytest and ruff
+pyproject.toml      - ruff lint config
 .env.example
 ```
 

@@ -52,7 +52,8 @@ with st.sidebar:
 EXAMPLES = [
     "What are recent approaches to reducing LLM hallucination?",
     "Who are the authors of papers about diffusion models for image generation?",
-    "Find paper Steady-State Behavior of Constant-Stepsize Stochastic Approximation: Gaussian Approximation and Tail Bounds with authors",
+    "Find paper Steady-State Behavior of Constant-Stepsize Stochastic Approximation: "
+    "Gaussian Approximation and Tail Bounds with authors",
     "Compare different approaches to reducing hallucination in LLMs, and list the authors for each",
     "Graph neural networks for molecule property prediction, list authors for each paper",
 ]
@@ -67,7 +68,13 @@ def set_question(q: str):
 
 st.subheader("Try an example")
 for example in EXAMPLES:
-    st.button(example, on_click=set_question, args=(example,), key=f"ex::{example}", use_container_width=True)
+    st.button(
+        example,
+        on_click=set_question,
+        args=(example,),
+        key=f"ex::{example}",
+        use_container_width=True,
+    )
 
 st.subheader("Or ask your own question")
 st.text_area("Question", key="question", height=90, label_visibility="collapsed")
