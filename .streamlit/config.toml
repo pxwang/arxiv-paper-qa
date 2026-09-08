@@ -1,7 +1,7 @@
 [server]
-# The default watcher walks every imported module's file paths (for
-# hot-reload on save) and trips over transformers' optional torchvision-only
-# submodules, which aren't installed since this app never touches them -
-# harmless but noisy. "poll" avoids that module-tree walk while keeping
-# hot-reload on save.
-fileWatcherType = "poll"
+# Any watcher backend (including "poll") walks every imported module's file
+# paths to know what to watch, which trips into transformers' many optional
+# torchvision-only submodules - harmless but noisy, and "poll" alone didn't
+# avoid it (it still hit a different submodule). "none" skips that walk
+# entirely, at the cost of no hot-reload on save (use "r" / rerun manually).
+fileWatcherType = "none"
