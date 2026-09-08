@@ -25,11 +25,11 @@ import json
 import pathlib
 import time
 
+from src import config  # sets HF_HUB_OFFLINE before sentence_transformers is imported
+
 import arxiv
 from elasticsearch import Elasticsearch, helpers
 from sentence_transformers import SentenceTransformer
-
-from src import config
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
 CACHE_FILE = DATA_DIR / "papers.jsonl"

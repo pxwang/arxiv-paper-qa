@@ -4,12 +4,12 @@ answer a question about them using a local LLM via LangChain/Ollama."""
 import re
 import sys
 
+from src import config  # sets HF_HUB_OFFLINE before sentence_transformers is imported
+
 from elasticsearch import Elasticsearch
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 from sentence_transformers import SentenceTransformer
-
-from src import config
 
 PROMPT = ChatPromptTemplate.from_template(
     """You are a research assistant. Answer the question using only the
@@ -99,7 +99,10 @@ def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int 
 
 def format_context(papers: list[dict]) -> str:
     return "\n\n".join(
-        f"[{p['arxiv_id']}] {p['title']}\n{p['abstract']}" for p in papers
+        f"[{p['arxiv_id']}] {p['title']}\n"
+        f"Authors: {', '.join(p['authors'])}\n"
+        f"{p['abstract']}"
+        for p in papers
     )
 
 

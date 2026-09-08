@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# The embedding model is loaded from a local cache after the first run, so
+# skip Hugging Face Hub's version-check request (which otherwise warns about
+# unauthenticated rate limits on every run). Set HF_HUB_OFFLINE=0 in .env to
+# re-enable it, e.g. if you need to fetch a different model.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
 ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 ES_INDEX = os.getenv("ES_INDEX", "arxiv_papers")
 
