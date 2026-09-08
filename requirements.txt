@@ -4,3 +4,4 @@ sentence-transformers>=3.0
 langchain-core>=0.3
 langchain-ollama>=0.2
 python-dotenv>=1.0
+streamlit>=1.38

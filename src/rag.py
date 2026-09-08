@@ -51,6 +51,7 @@ def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
     resp = es.search(
         index=config.ES_INDEX,
         size=0,
+        track_total_hits=True,
         aggs={
             "oldest": {"min": {"field": "published"}},
             "newest": {"max": {"field": "published"}},

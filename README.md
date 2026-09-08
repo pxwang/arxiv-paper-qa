@@ -66,7 +66,24 @@ python -m src.ingest
 
 # 4. Ask questions
 python -m src.rag "What are recent approaches to reducing LLM hallucination?"
+
+# ...or launch the web UI instead
+streamlit run app.py
 ```
+
+## Web UI
+
+`app.py` is a small Streamlit front end over the same `ask()` pipeline used by
+the CLI: a sidebar showing corpus stats (paper count, date range, embedding
+model, LLM in use), a handful of example questions to try, and a free-text
+box for your own. Run it with:
+
+```bash
+streamlit run app.py
+```
+
+Then open `http://localhost:8501`. Elasticsearch and Ollama both need to be
+running first, same as the CLI.
 
 ### Caching
 
@@ -87,7 +104,8 @@ src/
   config.py   - settings: ES connection, index name, category, date window, model names
   ingest.py   - fetch from ArXiv API, embed abstracts, index into Elasticsearch
   rag.py      - retrieve + generate: hybrid search in ES, then answer via Ollama
-docker-compose.yml - single-node Elasticsearch for local dev
+app.py              - Streamlit web UI over the rag.py pipeline
+docker-compose.yml  - single-node Elasticsearch for local dev
 requirements.txt
 .env.example
 ```
@@ -114,6 +132,6 @@ fetches.
 
 ## Status
 
-Early scaffold — ingestion and RAG pipeline are functional for the MVP
-scope above. Next steps: chunking for full-text (currently abstract-only),
-re-ranking, and a simple chat UI.
+Early scaffold — ingestion, RAG pipeline, and a Streamlit web UI are
+functional for the MVP scope above. Next steps: chunking for full-text
+(currently abstract-only) and re-ranking.
