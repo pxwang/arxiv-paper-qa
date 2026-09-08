@@ -1,4 +1,4 @@
-<img src="docs/icon.svg" width="96" alt="Project icon: a ship's wheel with a code-bracket hub">
+<img src="docs/social-preview.png" width="640" alt="Let LLM code — ArXiv paper Q&amp;A, a ship's wheel with a code-bracket hub">
 
 # ArXiv Scientific Paper Summarizer and Q&A
 
