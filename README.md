@@ -99,6 +99,19 @@ Pass `--refresh` to force a fresh fetch:
 python -m src.ingest --refresh
 ```
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Tests mock Elasticsearch, the embedding model, and the LLM (no live services
+needed) - `ask()` accepts optional `es`/`embed_model`/`llm` arguments for
+exactly this reason. Covers the BM25+kNN merge/dedup logic, the ArXiv-ID
+direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume behavior,
+and a couple of past regressions (empty-index crash, vector source field).
+
 ## Project layout
 
 ```text
@@ -107,8 +120,10 @@ src/
   ingest.py   - fetch from ArXiv API, embed abstracts, index into Elasticsearch
   rag.py      - retrieve + generate: hybrid search in ES, then answer via Ollama
 app.py              - Streamlit web UI over the rag.py pipeline
+tests/              - pytest suite (mocked ES/embedding model/LLM)
 docker-compose.yml  - single-node Elasticsearch for local dev
 requirements.txt
+requirements-dev.txt - adds pytest
 .env.example
 ```
 
