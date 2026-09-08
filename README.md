@@ -1,5 +1,7 @@
 # ArXiv Scientific Paper Summarizer and Q&A
 
+[![Tests](https://github.com/pxwang/arxiv-paper-qa/actions/workflows/test.yml/badge.svg)](https://github.com/pxwang/arxiv-paper-qa/actions/workflows/test.yml)
+
 Download recent ArXiv papers in a chosen field, index them in Elasticsearch
 with dense-vector embeddings, and chat with the collection — find related
 work, compare methodologies, or summarize findings across papers.
