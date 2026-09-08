@@ -1,3 +1,5 @@
+<img src="docs/icon.svg" width="96" alt="Project icon: a ship's wheel with a code-bracket hub">
+
 # ArXiv Scientific Paper Summarizer and Q&A
 
 [![Tests](https://github.com/pxwang/arxiv-paper-qa/actions/workflows/test.yml/badge.svg)](https://github.com/pxwang/arxiv-paper-qa/actions/workflows/test.yml)
