@@ -1,7 +1,12 @@
-elasticsearch>=8.15,<9
-arxiv>=2.1
-sentence-transformers>=3.0
-langchain-core>=0.3
-langchain-ollama>=0.2
-python-dotenv>=1.0
-streamlit>=1.38
+# Direct dependencies pinned to exact versions (resolved against Python
+# 3.11, matching CI) for reproducible installs. Transitive dependencies are
+# intentionally left unpinned here - torch pulls in Linux-only CUDA packages
+# on Linux that have no macOS wheels, so a full transitive lock would break
+# installs on this project's primary dev platform.
+elasticsearch==8.19.3
+arxiv==4.0.1
+sentence-transformers==6.0.1
+langchain-core==1.6.2
+langchain-ollama==1.1.0
+python-dotenv==1.2.3
+streamlit==1.63.0

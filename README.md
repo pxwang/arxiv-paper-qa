@@ -54,6 +54,12 @@ Answer, with source paper citations
    > the venv with that instead — ML package wheels lag behind new Python
    > releases.
 
+   Direct dependencies in `requirements.txt` are pinned to exact versions
+   (resolved against Python 3.11, matching CI) for reproducible installs.
+   Transitive dependencies are left unpinned - torch pulls in Linux-only
+   CUDA packages on Linux that have no macOS wheels, so a full transitive
+   lock would break installs on macOS.
+
 ## Setup
 
 ```bash
