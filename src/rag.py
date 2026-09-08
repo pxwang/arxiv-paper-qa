@@ -58,8 +58,8 @@ def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
         },
     )
     count = resp["hits"]["total"]["value"]
-    oldest = resp["aggregations"]["oldest"]["value_as_string"]
-    newest = resp["aggregations"]["newest"]["value_as_string"]
+    oldest = resp["aggregations"]["oldest"].get("value_as_string") or "n/a"
+    newest = resp["aggregations"]["newest"].get("value_as_string") or "n/a"
     return oldest, newest, count
 
 
@@ -107,8 +107,32 @@ def format_context(papers: list[dict]) -> str:
     )
 
 
-def ask(question: str) -> str:
-    es = Elasticsearch(config.ES_URL)
+def build_es_client() -> Elasticsearch:
+    return Elasticsearch(config.ES_URL, request_timeout=config.ES_TIMEOUT_SECONDS)
+
+
+def build_embed_model() -> SentenceTransformer:
+    return SentenceTransformer(config.EMBEDDING_MODEL)
+
+
+def build_llm() -> ChatOllama:
+    return ChatOllama(
+        model=config.OLLAMA_MODEL,
+        base_url=config.OLLAMA_BASE_URL,
+        client_kwargs={"timeout": config.OLLAMA_TIMEOUT_SECONDS},
+    )
+
+
+def ask(
+    question: str,
+    es: Elasticsearch | None = None,
+    embed_model: SentenceTransformer | None = None,
+    llm: ChatOllama | None = None,
+) -> str:
+    """Answer a question against the indexed corpus. Callers that make many
+    calls (e.g. the Streamlit app) should build es/embed_model/llm once and
+    pass them in, rather than paying model-load/connection cost per call."""
+    es = es or build_es_client()
 
     arxiv_id = extract_arxiv_id(question)
     if arxiv_id:
@@ -123,13 +147,13 @@ def ask(question: str) -> str:
             )
         papers = [paper]
     else:
-        embed_model = SentenceTransformer(config.EMBEDDING_MODEL)
+        embed_model = embed_model or build_embed_model()
         papers = search(es, embed_model, question)
 
     if not papers:
         return "No indexed papers matched this question. Have you run `python -m src.ingest` yet?"
 
-    llm = ChatOllama(model=config.OLLAMA_MODEL, base_url=config.OLLAMA_BASE_URL)
+    llm = llm or build_llm()
     chain = PROMPT | llm
 
     result = chain.invoke({"context": format_context(papers), "question": question})
@@ -141,4 +165,12 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Usage: python -m src.rag "your question here"')
         sys.exit(1)
-    print(ask(" ".join(sys.argv[1:])))
+    try:
+        print(ask(" ".join(sys.argv[1:])))
+    except Exception as e:
+        print(
+            f"Error: {e}\n\n"
+            f"Check that Elasticsearch ({config.ES_URL}) and Ollama "
+            f"({config.OLLAMA_BASE_URL}) are both running."
+        )
+        sys.exit(1)

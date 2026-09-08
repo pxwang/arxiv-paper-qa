@@ -5,12 +5,26 @@ Run with:
 """
 
 import streamlit as st
-from elasticsearch import Elasticsearch
 
 from src import config
-from src.rag import ask, corpus_date_range
+from src.rag import ask, build_embed_model, build_es_client, build_llm, corpus_date_range
 
 st.set_page_config(page_title="ArXiv Paper Q&A", page_icon="\U0001F4C4", layout="centered")
+
+
+@st.cache_resource
+def get_es_client():
+    return build_es_client()
+
+
+@st.cache_resource
+def get_embed_model():
+    return build_embed_model()
+
+
+@st.cache_resource
+def get_llm():
+    return build_llm()
 
 st.title("\U0001F4C4 ArXiv Paper Q&A")
 st.caption(
@@ -22,12 +36,15 @@ st.caption(
 with st.sidebar:
     st.subheader("Corpus")
     try:
-        es = Elasticsearch(config.ES_URL)
+        es = get_es_client()
         oldest, newest, count = corpus_date_range(es)
         st.metric("Indexed papers", f"{count:,}")
         st.write(f"**Date range:** {oldest[:10]} to {newest[:10]}")
     except Exception as e:
-        st.error(f"Could not reach Elasticsearch at {config.ES_URL}: {e}")
+        st.error(
+            f"Could not read the corpus from Elasticsearch at {config.ES_URL}: {e}\n\n"
+            f"Is ES running, and has `python -m src.ingest` been run yet?"
+        )
     st.divider()
     st.write(f"**Embedding model:** {config.EMBEDDING_MODEL}")
     st.write(f"**LLM:** {config.OLLAMA_MODEL}")
@@ -64,7 +81,12 @@ if ask_clicked:
     else:
         with st.spinner("Retrieving papers and generating answer..."):
             try:
-                answer = ask(question)
+                answer = ask(
+                    question,
+                    es=get_es_client(),
+                    embed_model=get_embed_model(),
+                    llm=get_llm(),
+                )
             except Exception as e:
                 st.error(f"Something went wrong: {e}")
             else:
