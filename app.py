@@ -35,7 +35,7 @@ with st.sidebar:
 EXAMPLES = [
     "What are recent approaches to reducing LLM hallucination?",
     "Who are the authors of papers about diffusion models for image generation?",
-    "Who wrote 2602.13906 and what is it about?",
+    "Find paper Steady-State Behavior of Constant-Stepsize Stochastic Approximation: Gaussian Approximation and Tail Bounds with authors",
     "Compare different approaches to reducing hallucination in LLMs, and list the authors for each",
     "Graph neural networks for molecule property prediction, list authors for each paper",
 ]

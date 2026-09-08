@@ -85,6 +85,8 @@ streamlit run app.py
 Then open `http://localhost:8501`. Elasticsearch and Ollama both need to be
 running first, same as the CLI.
 
+![Web UI screenshot](docs/ui-screenshot.png)
+
 ### Caching
 
 Fetched papers are cached to `data/papers.jsonl`. Re-running `python -m
