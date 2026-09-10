@@ -147,6 +147,27 @@ class TestSearch:
         assert papers == []
         reranker.predict.assert_not_called()
 
+    def test_rerank_false_returns_rrf_order_without_calling_reranker(self):
+        """Used by src/evaluate_rerank.py to compare RRF-only against
+        RRF+rerank through the same fusion code path."""
+        paper_a = {"arxiv_id": "1", "title": "A", "abstract": "a"}
+        paper_b = {"arxiv_id": "2", "title": "B", "abstract": "b"}
+        paper_c = {"arxiv_id": "3", "title": "C", "abstract": "c"}
+
+        es = MagicMock()
+        es.search.side_effect = [
+            {"hits": {"hits": [{"_source": paper_a}, {"_source": paper_b}]}},  # BM25: A, B
+            {"hits": {"hits": [{"_source": paper_b}, {"_source": paper_c}]}},  # kNN: B, C
+        ]
+        model = MagicMock()
+        model.encode.return_value.tolist.return_value = [0.1, 0.2]
+        reranker = MagicMock()
+
+        papers = search(es, model, reranker, "some question", k=2, rerank=False)
+
+        assert [p["arxiv_id"] for p in papers] == ["2", "1"]  # RRF fusion order
+        reranker.predict.assert_not_called()
+
 
 class TestFormatContext:
     def test_includes_id_title_authors_abstract(self):

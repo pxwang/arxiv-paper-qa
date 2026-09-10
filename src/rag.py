@@ -72,6 +72,7 @@ def search(
     k: int = 5,
     candidate_k: int = 20,
     rrf_k: int = 60,
+    rerank: bool = True,
 ):
     """Retrieve a candidate_k-sized pool via BM25 and via kNN independently,
     fuse them with Reciprocal Rank Fusion, then re-rank the fused candidates
@@ -84,7 +85,12 @@ def search(
     constant from the original RRF paper. RRF is cheap and good at surfacing
     a candidate pool from two independent signals, but the cross-encoder
     scores each candidate directly against the question for a more precise
-    final ordering than rank-fusion alone can give."""
+    final ordering than rank-fusion alone can give.
+
+    Set rerank=False to return the RRF-fused top-k directly, skipping the
+    cross-encoder - this exists so src/evaluate_rerank.py can compare both
+    stages against the exact same fusion code, rather than a reimplemented
+    copy that could drift out of sync."""
     vector = model.encode(question, normalize_embeddings=True).tolist()
 
     bm25_resp = es.search(
@@ -114,8 +120,8 @@ def search(
 
     fused_ids = sorted(scores, key=scores.get, reverse=True)
     candidates = [papers_by_id[arxiv_id] for arxiv_id in fused_ids]
-    if not candidates:
-        return []
+    if not candidates or not rerank:
+        return candidates[:k]
 
     pairs = [(question, paper["abstract"]) for paper in candidates]
     rerank_scores = reranker.predict(pairs)
