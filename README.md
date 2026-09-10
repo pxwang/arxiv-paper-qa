@@ -26,7 +26,9 @@ Ingestion (src/ingest.py)
     │  embed abstracts with BAAI/bge-small-en-v1.5 (local, CPU)
     ▼
 Elasticsearch (dense_vector field + text fields)
-    │  hybrid search: BM25 + kNN
+    │  hybrid search: BM25 + kNN, fused with RRF
+    ▼
+Cross-encoder re-ranking (BAAI/bge-reranker-base, local, CPU)
     ▼
 RAG chain (src/rag.py, LangChain)
     │  retrieve top-k chunks → prompt → local LLM
@@ -116,12 +118,12 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Tests mock Elasticsearch, the embedding model, and the LLM (no live services
-needed) - `ask()` accepts optional `es`/`embed_model`/`llm` arguments for
-exactly this reason. Covers the BM25+kNN Reciprocal Rank Fusion logic, the
-ArXiv-ID direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume
-behavior, and a couple of past regressions (empty-index crash, vector
-source field).
+Tests mock Elasticsearch, the embedding model, the reranker, and the LLM (no
+live services needed) - `ask()` accepts optional `es`/`embed_model`/
+`reranker`/`llm` arguments for exactly this reason. Covers the BM25+kNN
+Reciprocal Rank Fusion and cross-encoder re-ranking logic, the ArXiv-ID
+direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume behavior,
+and a couple of past regressions (empty-index crash, vector source field).
 
 ## Lint
 
@@ -175,5 +177,5 @@ fetches.
 ## Status
 
 Early scaffold — ingestion, RAG pipeline, and a Streamlit web UI are
-functional for the MVP scope above. Next steps: chunking for full-text
-(currently abstract-only) and re-ranking.
+functional for the MVP scope above. Next step: chunking for full-text
+(currently abstract-only).
