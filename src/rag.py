@@ -63,12 +63,15 @@ def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
     return oldest, newest, count
 
 
-def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int = 5):
-    """Retrieve top-k via BM25 and top-k via kNN independently, then merge
-    the two lists (BM25 first, then any kNN hits not already included).
-    BM25 and kNN scores aren't on comparable scales, so rather than summing
-    them into one ranking, each method's own top-k stands on its own and
-    duplicates (by arxiv_id) are dropped."""
+def search(
+    es: Elasticsearch, model: SentenceTransformer, question: str, k: int = 5, rrf_k: int = 60
+):
+    """Retrieve top-k via BM25 and top-k via kNN independently, then fuse
+    them with Reciprocal Rank Fusion: score(paper) = sum(1 / (rrf_k + rank))
+    over each ranked list the paper appears in, where rank is that paper's
+    1-indexed position within that list. RRF combines by rank rather than
+    raw score, so BM25 and kNN scores never need to be on a comparable
+    scale. rrf_k=60 is the standard constant from the original RRF paper."""
     vector = model.encode(question, normalize_embeddings=True).tolist()
 
     bm25_resp = es.search(
@@ -87,15 +90,17 @@ def search(es: Elasticsearch, model: SentenceTransformer, question: str, k: int 
         },
     )
 
-    seen_ids = set()
-    papers = []
-    for hit in bm25_resp["hits"]["hits"] + knn_resp["hits"]["hits"]:
-        paper = hit["_source"]
-        if paper["arxiv_id"] in seen_ids:
-            continue
-        seen_ids.add(paper["arxiv_id"])
-        papers.append(paper)
-    return papers
+    scores: dict[str, float] = {}
+    papers_by_id: dict[str, dict] = {}
+    for hits in (bm25_resp["hits"]["hits"], knn_resp["hits"]["hits"]):
+        for rank, hit in enumerate(hits, start=1):
+            paper = hit["_source"]
+            arxiv_id = paper["arxiv_id"]
+            papers_by_id.setdefault(arxiv_id, paper)
+            scores[arxiv_id] = scores.get(arxiv_id, 0.0) + 1 / (rrf_k + rank)
+
+    ranked_ids = sorted(scores, key=scores.get, reverse=True)
+    return [papers_by_id[arxiv_id] for arxiv_id in ranked_ids[:k]]
 
 
 def format_context(papers: list[dict]) -> str:

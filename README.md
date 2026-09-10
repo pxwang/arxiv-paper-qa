@@ -118,9 +118,10 @@ pytest
 
 Tests mock Elasticsearch, the embedding model, and the LLM (no live services
 needed) - `ask()` accepts optional `es`/`embed_model`/`llm` arguments for
-exactly this reason. Covers the BM25+kNN merge/dedup logic, the ArXiv-ID
-direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume behavior,
-and a couple of past regressions (empty-index crash, vector source field).
+exactly this reason. Covers the BM25+kNN Reciprocal Rank Fusion logic, the
+ArXiv-ID direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume
+behavior, and a couple of past regressions (empty-index crash, vector
+source field).
 
 ## Lint
 

@@ -83,17 +83,19 @@ class TestCorpusDateRange:
 
 
 class TestSearch:
-    def test_merges_bm25_and_knn_dropping_duplicates(self):
-        """Regression test for the BM25+kNN merge: BM25 hits come first,
-        then any kNN hits not already seen, with no duplicate arxiv_ids."""
+    def test_fuses_bm25_and_knn_by_reciprocal_rank(self):
+        """Paper B ranks 2nd in BM25 and 1st in kNN, so its RRF score
+        (1/62 + 1/61) beats paper A's BM25-only score (1/61) even though A
+        was ranked above B in BM25 alone. Paper C (kNN rank 2 only, 1/62)
+        scores lowest and is dropped by the k=2 result cap."""
         paper_a = {"arxiv_id": "1", "title": "A"}
         paper_b = {"arxiv_id": "2", "title": "B"}
         paper_c = {"arxiv_id": "3", "title": "C"}
 
         es = MagicMock()
         es.search.side_effect = [
-            {"hits": {"hits": [{"_source": paper_a}, {"_source": paper_b}]}},  # BM25
-            {"hits": {"hits": [{"_source": paper_b}, {"_source": paper_c}]}},  # kNN
+            {"hits": {"hits": [{"_source": paper_a}, {"_source": paper_b}]}},  # BM25: A, B
+            {"hits": {"hits": [{"_source": paper_b}, {"_source": paper_c}]}},  # kNN: B, C
         ]
 
         model = MagicMock()
@@ -101,7 +103,7 @@ class TestSearch:
 
         papers = search(es, model, "some question", k=2)
 
-        assert [p["arxiv_id"] for p in papers] == ["1", "2", "3"]
+        assert [p["arxiv_id"] for p in papers] == ["2", "1"]
         assert es.search.call_count == 2
         model.encode.assert_called_once_with("some question", normalize_embeddings=True)
 
