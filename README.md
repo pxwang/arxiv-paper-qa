@@ -26,7 +26,9 @@ Ingestion (src/ingest.py)
     │  embed abstracts with BAAI/bge-small-en-v1.5 (local, CPU)
     ▼
 Elasticsearch (dense_vector field + text fields)
-    │  hybrid search: BM25 + kNN
+    │  hybrid search: BM25 + kNN, fused with RRF
+    ▼
+Cross-encoder re-ranking (BAAI/bge-reranker-base, local, CPU)
     ▼
 RAG chain (src/rag.py, LangChain)
     │  retrieve top-k chunks → prompt → local LLM
@@ -116,12 +118,42 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Tests mock Elasticsearch, the embedding model, and the LLM (no live services
-needed) - `ask()` accepts optional `es`/`embed_model`/`llm` arguments for
-exactly this reason. Covers the BM25+kNN Reciprocal Rank Fusion logic, the
-ArXiv-ID direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume
-behavior, and a couple of past regressions (empty-index crash, vector
-source field).
+Tests mock Elasticsearch, the embedding model, the reranker, and the LLM (no
+live services needed) - `ask()` accepts optional `es`/`embed_model`/
+`reranker`/`llm` arguments for exactly this reason. Covers the BM25+kNN
+Reciprocal Rank Fusion and cross-encoder re-ranking logic, the ArXiv-ID
+direct-lookup path, `src/ingest.py`'s chunk caching/retry/resume behavior,
+and a couple of past regressions (empty-index crash, vector source field).
+
+## Evaluation
+
+Unit tests check that the retrieval code behaves correctly (fusion math,
+dedup, etc.); they don't say whether re-ranking actually improves result
+*quality*. `src/evaluate_rerank.py` measures that with Mean Reciprocal Rank
+(MRR) via self-retrieval: it samples N indexed papers, queries with each
+paper's own title, and checks what rank the paper's own arxiv_id comes back
+at - once with RRF fusion alone, once with the cross-encoder re-rank on top.
+
+```bash
+python -m src.evaluate_rerank --n 50 --k 10
+```
+
+Example run against this project's index (50 sampled papers, `k=10`):
+
+```
+MRR@10 (RRF only):      0.866
+MRR@10 (RRF + rerank): 0.902
+```
+
+Re-ranking gave a net improvement here - a few queries went from "not found
+in top 10" to rank 1, at the cost of a couple of small regressions elsewhere
+- but treat this as one illustrative run, not a fixed benchmark: MRR moves
+with corpus content and sample size (a run with `--n 10` swung the other
+way), and self-retrieval-by-title is a proxy for "found the exact paper
+whose title was echoed back," not for open-ended question relevance. Rerun
+it yourself, and sanity-check on real questions (e.g. the ones in `app.py`'s
+`EXAMPLES` list) before trusting a change to `RERANK_MODEL`, `rrf_k`, or
+`candidate_k`.
 
 ## Lint
 
@@ -140,15 +172,16 @@ stdlib/third-party/first-party ordering would silently undo that fix.
 
 ```text
 src/
-  config.py   - settings: ES connection, index name, category, date window, model names
-  ingest.py   - fetch from ArXiv API, embed abstracts, index into Elasticsearch
-  rag.py      - retrieve + generate: hybrid search in ES, then answer via Ollama
-app.py              - Streamlit web UI over the rag.py pipeline
-tests/              - pytest suite (mocked ES/embedding model/LLM)
-docker-compose.yml  - single-node Elasticsearch for local dev
+  config.py           - settings: ES connection, index name, category, date window, model names
+  ingest.py           - fetch from ArXiv API, embed abstracts, index into Elasticsearch
+  rag.py              - retrieve + generate: hybrid search in ES, then answer via Ollama
+  evaluate_rerank.py  - MRR comparison of RRF-only vs. RRF+rerank retrieval
+app.py                - Streamlit web UI over the rag.py pipeline
+tests/                - pytest suite (mocked ES/embedding model/LLM)
+docker-compose.yml    - single-node Elasticsearch for local dev
 requirements.txt
-requirements-dev.txt - adds pytest and ruff
-pyproject.toml      - ruff lint config
+requirements-dev.txt  - adds pytest and ruff
+pyproject.toml        - ruff lint config
 .env.example
 ```
 
@@ -175,5 +208,5 @@ fetches.
 ## Status
 
 Early scaffold — ingestion, RAG pipeline, and a Streamlit web UI are
-functional for the MVP scope above. Next steps: chunking for full-text
-(currently abstract-only) and re-ranking.
+functional for the MVP scope above. Next step: chunking for full-text
+(currently abstract-only).

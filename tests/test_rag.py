@@ -87,10 +87,11 @@ class TestSearch:
         """Paper B ranks 2nd in BM25 and 1st in kNN, so its RRF score
         (1/62 + 1/61) beats paper A's BM25-only score (1/61) even though A
         was ranked above B in BM25 alone. Paper C (kNN rank 2 only, 1/62)
-        scores lowest and is dropped by the k=2 result cap."""
-        paper_a = {"arxiv_id": "1", "title": "A"}
-        paper_b = {"arxiv_id": "2", "title": "B"}
-        paper_c = {"arxiv_id": "3", "title": "C"}
+        scores lowest. The reranker here just preserves the RRF order (equal
+        descending scores), isolating this test to the fusion step."""
+        paper_a = {"arxiv_id": "1", "title": "A", "abstract": "a"}
+        paper_b = {"arxiv_id": "2", "title": "B", "abstract": "b"}
+        paper_c = {"arxiv_id": "3", "title": "C", "abstract": "c"}
 
         es = MagicMock()
         es.search.side_effect = [
@@ -100,12 +101,72 @@ class TestSearch:
 
         model = MagicMock()
         model.encode.return_value.tolist.return_value = [0.1, 0.2]
+        reranker = MagicMock()
+        reranker.predict.return_value = [0.9, 0.6, 0.3]  # preserves fused order: B, A, C
 
-        papers = search(es, model, "some question", k=2)
+        papers = search(es, model, reranker, "some question", k=2)
 
         assert [p["arxiv_id"] for p in papers] == ["2", "1"]
         assert es.search.call_count == 2
         model.encode.assert_called_once_with("some question", normalize_embeddings=True)
+
+    def test_reranker_score_determines_final_order(self):
+        """RRF fuses to the order B, A, C (see the test above), but the
+        cross-encoder scores A highest and B lowest here - proving the final
+        result follows the reranker's judgment, not the RRF fusion order."""
+        paper_a = {"arxiv_id": "1", "title": "A", "abstract": "a"}
+        paper_b = {"arxiv_id": "2", "title": "B", "abstract": "b"}
+        paper_c = {"arxiv_id": "3", "title": "C", "abstract": "c"}
+
+        es = MagicMock()
+        es.search.side_effect = [
+            {"hits": {"hits": [{"_source": paper_a}, {"_source": paper_b}]}},  # BM25: A, B
+            {"hits": {"hits": [{"_source": paper_b}, {"_source": paper_c}]}},  # kNN: B, C
+        ]
+
+        model = MagicMock()
+        model.encode.return_value.tolist.return_value = [0.1, 0.2]
+        reranker = MagicMock()
+        reranker.predict.return_value = [0.2, 0.9, 0.5]  # scores for fused order B, A, C
+
+        papers = search(es, model, reranker, "some question", k=3)
+
+        assert [p["arxiv_id"] for p in papers] == ["1", "3", "2"]
+        pairs = reranker.predict.call_args.args[0]
+        assert pairs == [("some question", "b"), ("some question", "a"), ("some question", "c")]
+
+    def test_no_candidates_skips_reranker(self):
+        es = MagicMock()
+        es.search.return_value = {"hits": {"hits": []}}
+        model = MagicMock()
+        model.encode.return_value.tolist.return_value = [0.0]
+        reranker = MagicMock()
+
+        papers = search(es, model, reranker, "some question")
+
+        assert papers == []
+        reranker.predict.assert_not_called()
+
+    def test_rerank_false_returns_rrf_order_without_calling_reranker(self):
+        """Used by src/evaluate_rerank.py to compare RRF-only against
+        RRF+rerank through the same fusion code path."""
+        paper_a = {"arxiv_id": "1", "title": "A", "abstract": "a"}
+        paper_b = {"arxiv_id": "2", "title": "B", "abstract": "b"}
+        paper_c = {"arxiv_id": "3", "title": "C", "abstract": "c"}
+
+        es = MagicMock()
+        es.search.side_effect = [
+            {"hits": {"hits": [{"_source": paper_a}, {"_source": paper_b}]}},  # BM25: A, B
+            {"hits": {"hits": [{"_source": paper_b}, {"_source": paper_c}]}},  # kNN: B, C
+        ]
+        model = MagicMock()
+        model.encode.return_value.tolist.return_value = [0.1, 0.2]
+        reranker = MagicMock()
+
+        papers = search(es, model, reranker, "some question", k=2, rerank=False)
+
+        assert [p["arxiv_id"] for p in papers] == ["2", "1"]  # RRF fusion order
+        reranker.predict.assert_not_called()
 
 
 class TestFormatContext:
@@ -188,12 +249,14 @@ class TestAsk:
         es.search.return_value = {"hits": {"hits": []}}
         model = MagicMock()
         model.encode.return_value.tolist.return_value = [0.0]
+        reranker = MagicMock()
         llm = FakeLLM()
 
-        answer = ask("an obscure topic", es=es, embed_model=model, llm=llm)
+        answer = ask("an obscure topic", es=es, embed_model=model, reranker=reranker, llm=llm)
 
         assert "No indexed papers matched" in answer
         assert llm.invocations == []
+        reranker.predict.assert_not_called()
 
     def test_topic_search_with_results(self):
         paper1 = self._paper("1")
@@ -205,9 +268,11 @@ class TestAsk:
         ]
         model = MagicMock()
         model.encode.return_value.tolist.return_value = [0.0]
+        reranker = MagicMock()
+        reranker.predict.return_value = [0.9, 0.8]
         llm = FakeLLM("Summary of both papers.")
 
-        answer = ask("some topic question", es=es, embed_model=model, llm=llm)
+        answer = ask("some topic question", es=es, embed_model=model, reranker=reranker, llm=llm)
 
         assert "Summary of both papers." in answer
         assert "[1] Paper 1" in answer

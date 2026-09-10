@@ -1,5 +1,6 @@
-"""Retrieve relevant papers from Elasticsearch (hybrid BM25 + kNN) and
-answer a question about them using a local LLM via LangChain/Ollama."""
+"""Retrieve relevant papers from Elasticsearch (hybrid BM25 + kNN, fused
+with RRF and re-ranked by a cross-encoder) and answer a question about them
+using a local LLM via LangChain/Ollama."""
 
 import re
 import sys
@@ -9,7 +10,7 @@ from src import config  # sets HF_HUB_OFFLINE before sentence_transformers is im
 from elasticsearch import Elasticsearch
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 PROMPT = ChatPromptTemplate.from_template(
     """You are a research assistant. Answer the question using only the
@@ -64,28 +65,46 @@ def corpus_date_range(es: Elasticsearch) -> tuple[str, str, int]:
 
 
 def search(
-    es: Elasticsearch, model: SentenceTransformer, question: str, k: int = 5, rrf_k: int = 60
+    es: Elasticsearch,
+    model: SentenceTransformer,
+    reranker: CrossEncoder,
+    question: str,
+    k: int = 5,
+    candidate_k: int = 20,
+    rrf_k: int = 60,
+    rerank: bool = True,
 ):
-    """Retrieve top-k via BM25 and top-k via kNN independently, then fuse
-    them with Reciprocal Rank Fusion: score(paper) = sum(1 / (rrf_k + rank))
-    over each ranked list the paper appears in, where rank is that paper's
-    1-indexed position within that list. RRF combines by rank rather than
-    raw score, so BM25 and kNN scores never need to be on a comparable
-    scale. rrf_k=60 is the standard constant from the original RRF paper."""
+    """Retrieve a candidate_k-sized pool via BM25 and via kNN independently,
+    fuse them with Reciprocal Rank Fusion, then re-rank the fused candidates
+    with a cross-encoder and return the final top-k.
+
+    RRF score(paper) = sum(1 / (rrf_k + rank)) over each ranked list the
+    paper appears in, where rank is that paper's 1-indexed position within
+    that list. RRF combines by rank rather than raw score, so BM25 and kNN
+    scores never need to be on a comparable scale; rrf_k=60 is the standard
+    constant from the original RRF paper. RRF is cheap and good at surfacing
+    a candidate pool from two independent signals, but the cross-encoder
+    scores each candidate directly against the question for a more precise
+    final ordering than rank-fusion alone can give.
+
+    Set rerank=False to return the RRF-fused top-k directly, skipping the
+    cross-encoder - this exists so src/evaluate_rerank.py can compare both
+    stages against the exact same fusion code, rather than a reimplemented
+    copy that could drift out of sync."""
     vector = model.encode(question, normalize_embeddings=True).tolist()
 
     bm25_resp = es.search(
         index=config.ES_INDEX,
-        size=k,
+        size=candidate_k,
         query={"match": {"abstract": question}},
     )
     knn_resp = es.search(
         index=config.ES_INDEX,
-        size=k,
+        size=candidate_k,
         knn={
             "field": "abstract_vector",
             "query_vector": vector,
-            "k": k,
+            "k": candidate_k,
             "num_candidates": 50,
         },
     )
@@ -99,8 +118,17 @@ def search(
             papers_by_id.setdefault(arxiv_id, paper)
             scores[arxiv_id] = scores.get(arxiv_id, 0.0) + 1 / (rrf_k + rank)
 
-    ranked_ids = sorted(scores, key=scores.get, reverse=True)
-    return [papers_by_id[arxiv_id] for arxiv_id in ranked_ids[:k]]
+    fused_ids = sorted(scores, key=scores.get, reverse=True)
+    candidates = [papers_by_id[arxiv_id] for arxiv_id in fused_ids]
+    if not candidates or not rerank:
+        return candidates[:k]
+
+    pairs = [(question, paper["abstract"]) for paper in candidates]
+    rerank_scores = reranker.predict(pairs)
+    ranked = sorted(
+        zip(candidates, rerank_scores, strict=True), key=lambda pair: pair[1], reverse=True
+    )
+    return [paper for paper, _ in ranked[:k]]
 
 
 def format_context(papers: list[dict]) -> str:
@@ -120,6 +148,10 @@ def build_embed_model() -> SentenceTransformer:
     return SentenceTransformer(config.EMBEDDING_MODEL)
 
 
+def build_reranker() -> CrossEncoder:
+    return CrossEncoder(config.RERANK_MODEL)
+
+
 def build_llm() -> ChatOllama:
     return ChatOllama(
         model=config.OLLAMA_MODEL,
@@ -137,11 +169,13 @@ def ask(
     question: str,
     es: Elasticsearch | None = None,
     embed_model: SentenceTransformer | None = None,
+    reranker: CrossEncoder | None = None,
     llm: ChatOllama | None = None,
 ) -> str:
     """Answer a question against the indexed corpus. Callers that make many
-    calls (e.g. the Streamlit app) should build es/embed_model/llm once and
-    pass them in, rather than paying model-load/connection cost per call."""
+    calls (e.g. the Streamlit app) should build es/embed_model/reranker/llm
+    once and pass them in, rather than paying model-load/connection cost per
+    call."""
     es = es or build_es_client()
 
     arxiv_id = extract_arxiv_id(question)
@@ -158,7 +192,8 @@ def ask(
         papers = [paper]
     else:
         embed_model = embed_model or build_embed_model()
-        papers = search(es, embed_model, question)
+        reranker = reranker or build_reranker()
+        papers = search(es, embed_model, reranker, question)
 
     if not papers:
         return "No indexed papers matched this question. Have you run `python -m src.ingest` yet?"

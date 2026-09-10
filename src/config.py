@@ -19,6 +19,7 @@ ARXIV_MONTHS_BACK = int(os.getenv("ARXIV_MONTHS_BACK", "18"))
 ARXIV_MAX_RESULTS = int(os.getenv("ARXIV_MAX_RESULTS", "5000"))
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+RERANK_MODEL = os.getenv("RERANK_MODEL", "BAAI/bge-reranker-base")
 
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
