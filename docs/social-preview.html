@@ -1,0 +1,68 @@
+<!--
+  Source for docs/social-preview.png (1280x640). The emblem is inlined from
+  docs/icon.svg (everything below the badge ground); keep the two in sync.
+  Render from the repo root:
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+      --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \
+      --window-size=1280,640 --screenshot=docs/social-preview.png \
+      "file://$PWD/docs/social-preview.html"
+-->
+<html><head><style>
+html,body{margin:0;width:1280px;height:640px;background:#12171E;overflow:hidden;font-family:"SF Mono",Menlo,monospace}
+.glow{position:absolute;left:630px;top:0;width:660px;height:660px;background:radial-gradient(circle,rgba(200,155,60,.22) 0%,rgba(200,155,60,.07) 45%,rgba(200,155,60,0) 70%)}
+.emb{position:absolute;left:678px;top:48px;width:564px;height:564px}
+.txt{position:absolute;left:110px;top:42px;height:640px;display:flex;flex-direction:column;justify-content:center;width:640px}
+.eye{color:#E0B85A;font:600 20px/1.2 -apple-system,"Helvetica Neue",sans-serif;letter-spacing:2.5px}
+h1{color:#EFE6D4;font-size:76px;line-height:1.1;margin:10px 0 34px;font-weight:700}
+.rule{width:200px;height:2px;background:#6E5A2E;margin-bottom:31px}
+.sub{color:#A9AFB8;font:500 20px/1.4 -apple-system,"Helvetica Neue",sans-serif}
+.url{color:#6E757E;font-size:18px;margin-top:14px}
+</style></head><body>
+<div class="glow"></div>
+<svg class="emb" viewBox="0 0 512 512">
+  <!-- wheel rim -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#C89B3C" stroke-width="10" />
+
+  <!-- spokes + handles (6, ship's-wheel style) -->
+  <g stroke="#C89B3C" stroke-linecap="round">
+    <!-- top -->
+    <line x1="256" y1="192" x2="256" y2="106" stroke-width="10" />
+    <line x1="256" y1="106" x2="256" y2="84" stroke-width="14" />
+    <circle cx="256" cy="84" r="10" fill="#C89B3C" stroke="none" />
+    <!-- upper right -->
+    <line x1="311" y1="224" x2="386" y2="181" stroke-width="10" />
+    <line x1="386" y1="181" x2="405" y2="170" stroke-width="14" />
+    <circle cx="405" cy="170" r="10" fill="#C89B3C" stroke="none" />
+    <!-- lower right -->
+    <line x1="311" y1="288" x2="386" y2="331" stroke-width="10" />
+    <line x1="386" y1="331" x2="405" y2="342" stroke-width="14" />
+    <circle cx="405" cy="342" r="10" fill="#C89B3C" stroke="none" />
+    <!-- bottom -->
+    <line x1="256" y1="320" x2="256" y2="406" stroke-width="10" />
+    <line x1="256" y1="406" x2="256" y2="428" stroke-width="14" />
+    <circle cx="256" cy="428" r="10" fill="#C89B3C" stroke="none" />
+    <!-- lower left -->
+    <line x1="201" y1="288" x2="126" y2="331" stroke-width="10" />
+    <line x1="126" y1="331" x2="107" y2="342" stroke-width="14" />
+    <circle cx="107" cy="342" r="10" fill="#C89B3C" stroke="none" />
+    <!-- upper left -->
+    <line x1="201" y1="224" x2="126" y2="181" stroke-width="10" />
+    <line x1="126" y1="181" x2="107" y2="170" stroke-width="14" />
+    <circle cx="107" cy="170" r="10" fill="#C89B3C" stroke="none" />
+  </g>
+
+  <!-- hub -->
+  <circle cx="256" cy="256" r="64" fill="#0A0D11" stroke="#C89B3C" stroke-width="8" />
+
+  <!-- code glyph </> as the hub, standing in for "instruction becomes code" -->
+  <g fill="none" stroke="#EDE6D6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M222,234 L204,256 L222,278" />
+    <path d="M240,276 L272,236" />
+    <path d="M290,234 L308,256 L290,278" />
+  </g>
+</svg>
+<div class="txt"><div class="eye">FROM API CALLS TO AGENTIC BUILDS</div>
+<h1>Let LLM code.</h1><div class="rule"></div>
+<div class="sub">ArXiv paper Q&amp;A — hybrid search + a local LLM</div>
+<div class="url">github.com/pxwang/arxiv-paper-qa</div></div>
+</body></html>
