@@ -179,8 +179,11 @@ def index_papers(papers: list[dict], batch_size: int = 64):
 
 
 def _flush_batch(es: Elasticsearch, model: SentenceTransformer, batch: list[dict]):
+    # Embed title + abstract so kNN can match on title-only terms. The field
+    # keeps its "abstract_vector" name so existing indexes stay compatible -
+    # re-run ingest to overwrite their abstract-only vectors.
     vectors = model.encode(
-        [p["abstract"] for p in batch],
+        [f"{p['title']}\n{p['abstract']}" for p in batch],
         normalize_embeddings=True,
         show_progress_bar=False,
     )

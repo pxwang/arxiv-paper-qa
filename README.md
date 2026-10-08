@@ -23,10 +23,10 @@ ArXiv API (export.arxiv.org)
     │  metadata + abstracts, filtered by category + date
     ▼
 Ingestion (src/ingest.py)
-    │  embed abstracts with BAAI/bge-small-en-v1.5 (local, CPU)
+    │  embed title + abstract with BAAI/bge-small-en-v1.5 (local, CPU)
     ▼
 Elasticsearch (dense_vector field + text fields)
-    │  hybrid search: BM25 + kNN, fused with RRF
+    │  hybrid search: BM25 (title^2 + abstract) + kNN, fused with RRF
     ▼
 Cross-encoder re-ranking (BAAI/bge-reranker-base, local, CPU)
     ▼
@@ -173,7 +173,7 @@ stdlib/third-party/first-party ordering would silently undo that fix.
 ```text
 src/
   config.py           - settings: ES connection, index name, category, date window, model names
-  ingest.py           - fetch from ArXiv API, embed abstracts, index into Elasticsearch
+  ingest.py           - fetch from ArXiv API, embed title + abstract, index into Elasticsearch
   rag.py              - retrieve + generate: hybrid search in ES, then answer via Ollama
   evaluate_rerank.py  - MRR comparison of RRF-only vs. RRF+rerank retrieval
 app.py                - Streamlit web UI over the rag.py pipeline

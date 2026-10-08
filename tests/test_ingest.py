@@ -109,7 +109,7 @@ class TestLoadOrFetchPapers:
 
 
 class TestFlushBatch:
-    def test_embeds_abstracts_only_and_builds_bulk_actions(self, monkeypatch):
+    def test_embeds_title_and_abstract_and_builds_bulk_actions(self, monkeypatch):
         es = MagicMock()
         model = MagicMock()
         model.encode.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
@@ -129,7 +129,7 @@ class TestFlushBatch:
         ingest._flush_batch(es, model, batch)
 
         model.encode.assert_called_once_with(
-            ["abs1", "abs2"], normalize_embeddings=True, show_progress_bar=False
+            ["T1\nabs1", "T2\nabs2"], normalize_embeddings=True, show_progress_bar=False
         )
         actions = captured["actions"]
         assert [a["_id"] for a in actions] == ["1", "2"]

@@ -96,7 +96,7 @@ def search(
     bm25_resp = es.search(
         index=config.ES_INDEX,
         size=candidate_k,
-        query={"match": {"abstract": question}},
+        query={"multi_match": {"query": question, "fields": ["title^2", "abstract"]}},
     )
     knn_resp = es.search(
         index=config.ES_INDEX,
@@ -123,7 +123,7 @@ def search(
     if not candidates or not rerank:
         return candidates[:k]
 
-    pairs = [(question, paper["abstract"]) for paper in candidates]
+    pairs = [(question, f"{paper['title']}\n{paper['abstract']}") for paper in candidates]
     rerank_scores = reranker.predict(pairs)
     ranked = sorted(
         zip(candidates, rerank_scores, strict=True), key=lambda pair: pair[1], reverse=True
