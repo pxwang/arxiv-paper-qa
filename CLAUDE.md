@@ -59,12 +59,13 @@ Current state:
 - [x] Ingestion with caching, chunked fetch, retry, resume
 - [x] Hybrid BM25 + kNN retrieval fused with RRF (#1)
 - [x] Cross-encoder re-ranking (#2) with MRR evaluation script
+- [x] Titles searched alongside abstracts in BM25, kNN, and re-ranking (#3)
 - [x] Streamlit web UI
 - [x] CI: ruff + pytest on Python 3.11
 
 Next up:
 - [ ] Chunking for full-text papers (currently abstract-only)
-- [ ] Pipeline ingest: index each date chunk right after it's fetched, instead of
+- [ ] Pipeline ingest (#4): index each date chunk right after it's fetched, instead of
   fetching everything then re-indexing the whole cache (makes papers searchable
   sooner and stops re-embedding papers that are already indexed)
 
