@@ -133,7 +133,24 @@ class TestSearch:
 
         assert [p["arxiv_id"] for p in papers] == ["1", "3", "2"]
         pairs = reranker.predict.call_args.args[0]
-        assert pairs == [("some question", "b"), ("some question", "a"), ("some question", "c")]
+        assert pairs == [
+            ("some question", "B\nb"),
+            ("some question", "A\na"),
+            ("some question", "C\nc"),
+        ]
+
+    def test_bm25_searches_title_and_abstract(self):
+        es = MagicMock()
+        es.search.return_value = {"hits": {"hits": []}}
+        model = MagicMock()
+        model.encode.return_value.tolist.return_value = [0.0]
+
+        search(es, model, MagicMock(), "some question")
+
+        bm25_query = es.search.call_args_list[0].kwargs["query"]
+        assert bm25_query == {
+            "multi_match": {"query": "some question", "fields": ["title^2", "abstract"]}
+        }
 
     def test_no_candidates_skips_reranker(self):
         es = MagicMock()
