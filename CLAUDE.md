@@ -68,5 +68,7 @@ Next up:
 - [ ] Pipeline ingest (#4): index each date chunk right after it's fetched, instead of
   fetching everything then re-indexing the whole cache (makes papers searchable
   sooner and stops re-embedding papers that are already indexed)
+- [ ] Set `num_ctx` in `build_llm()`: Ollama's default context (2048/4096 by
+  version) can silently truncate the start of the prompt (the first excerpts)
 
 Keep this section updated as work lands.
