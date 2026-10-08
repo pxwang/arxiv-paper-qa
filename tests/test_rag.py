@@ -1,7 +1,19 @@
 from unittest.mock import MagicMock
 
+from src import rag
 from src.rag import ask, corpus_date_range, extract_arxiv_id, find_by_id, format_context, search
 from tests.fakes import FakeLLM
+
+
+class TestBuildEsClient:
+    def test_connects_with_the_read_only_api_key(self, monkeypatch):
+        es_cls = MagicMock()
+        monkeypatch.setattr(rag, "Elasticsearch", es_cls)
+        monkeypatch.setattr(rag.config, "ES_API_KEY", "read-key")
+
+        rag.build_es_client()
+
+        assert es_cls.call_args.kwargs["api_key"] == "read-key"
 
 
 class TestExtractArxivId:

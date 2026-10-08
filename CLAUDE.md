@@ -42,6 +42,9 @@ python -m src.evaluate_rerank --n 50 --k 10   # MRR: RRF-only vs RRF+rerank
   `from src import config` comes before third-party imports so
   `HF_HUB_OFFLINE` is set before `huggingface_hub` loads. Ruff's `I001` is
   ignored for these files in `pyproject.toml` - don't reorder them.
+- Elasticsearch requires auth (localhost-only, security on). Search code uses
+  the read-only `ES_API_KEY` via `build_es_client()`; only `src/ingest.py` uses
+  the write key `ES_INGEST_API_KEY`. Keep new ES clients on the least-privileged key.
 - `ask()` and `search()` take injectable `es`/`embed_model`/`reranker`/`llm`
   so tests can pass fakes. Keep new dependencies injectable the same way.
 - `search(rerank=False)` exists so the eval compares both stages on the
@@ -61,6 +64,7 @@ Current state:
 - [x] Cross-encoder re-ranking (#2) with MRR evaluation script
 - [x] Titles searched alongside abstracts in BM25, kNN, and re-ranking (#3)
 - [x] Streamlit web UI
+- [x] Elasticsearch secured: localhost bind + read/write API keys (#6)
 - [x] CI: ruff + pytest on Python 3.11
 
 Next up:

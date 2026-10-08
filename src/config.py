@@ -13,6 +13,10 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 ES_INDEX = os.getenv("ES_INDEX", "arxiv_papers")
 ES_TIMEOUT_SECONDS = int(os.getenv("ES_TIMEOUT_SECONDS", "10"))
+# Read-only key for search (CLI, web UI, eval); write key for src.ingest only.
+# Unset means no auth, which only works against an ES with security disabled.
+ES_API_KEY = os.getenv("ES_API_KEY") or None
+ES_INGEST_API_KEY = os.getenv("ES_INGEST_API_KEY") or None
 
 ARXIV_CATEGORIES = [c.strip() for c in os.getenv("ARXIV_CATEGORIES", "cs.AI,cs.LG").split(",")]
 ARXIV_MONTHS_BACK = int(os.getenv("ARXIV_MONTHS_BACK", "18"))

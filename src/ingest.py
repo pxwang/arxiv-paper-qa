@@ -162,7 +162,7 @@ def load_or_fetch_papers(refresh: bool = False) -> list[dict]:
 
 
 def index_papers(papers: list[dict], batch_size: int = 64):
-    es = Elasticsearch(config.ES_URL)
+    es = Elasticsearch(config.ES_URL, api_key=config.ES_INGEST_API_KEY)
     if not es.indices.exists(index=config.ES_INDEX):
         es.indices.create(index=config.ES_INDEX, body=INDEX_MAPPING)
 
