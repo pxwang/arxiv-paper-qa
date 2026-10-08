@@ -64,5 +64,8 @@ Current state:
 
 Next up:
 - [ ] Chunking for full-text papers (currently abstract-only)
+- [ ] Pipeline ingest: index each date chunk right after it's fetched, instead of
+  fetching everything then re-indexing the whole cache (makes papers searchable
+  sooner and stops re-embedding papers that are already indexed)
 
 Keep this section updated as work lands.
