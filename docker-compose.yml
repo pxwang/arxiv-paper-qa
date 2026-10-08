@@ -4,14 +4,18 @@ services:
     container_name: arxiv-qa-es
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      # Auth on, TLS off: fine because the port below is bound to localhost
+      # only. Turn on xpack.security.http.ssl if ES ever runs on another host.
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?set ELASTIC_PASSWORD in .env}
       - ES_JAVA_OPTS=-Xms1g -Xmx2g
     ports:
-      - "9200:9200"
+      - "127.0.0.1:9200:9200"
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -u elastic:$${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -136,3 +136,15 @@ class TestFlushBatch:
         assert actions[0]["_source"]["abstract_vector"] == [0.1, 0.2]
         assert actions[1]["_source"]["abstract_vector"] == [0.3, 0.4]
         assert actions[0]["_source"]["title"] == "T1"
+
+
+class TestIndexPapers:
+    def test_connects_with_the_ingest_api_key(self, monkeypatch):
+        es_cls = MagicMock()
+        monkeypatch.setattr(ingest, "Elasticsearch", es_cls)
+        monkeypatch.setattr(ingest, "SentenceTransformer", MagicMock())
+        monkeypatch.setattr(ingest.config, "ES_INGEST_API_KEY", "write-key")
+
+        ingest.index_papers([])
+
+        es_cls.assert_called_once_with(ingest.config.ES_URL, api_key="write-key")

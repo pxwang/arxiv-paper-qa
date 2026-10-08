@@ -141,7 +141,9 @@ def format_context(papers: list[dict]) -> str:
 
 
 def build_es_client() -> Elasticsearch:
-    return Elasticsearch(config.ES_URL, request_timeout=config.ES_TIMEOUT_SECONDS)
+    return Elasticsearch(
+        config.ES_URL, api_key=config.ES_API_KEY, request_timeout=config.ES_TIMEOUT_SECONDS
+    )
 
 
 def build_embed_model() -> SentenceTransformer:

@@ -67,21 +67,53 @@ Answer, with source paper citations
 ## Setup
 
 ```bash
-# 1. Start Elasticsearch
-docker compose up -d
-
-# 2. Copy env template and adjust if needed
+# 1. Copy env template, then set ELASTIC_PASSWORD in .env to a real password
 cp .env.example .env
 
-# 3. Ingest papers (cs.AI + cs.LG, last ~18 months)
+# 2. Start Elasticsearch (bound to localhost, auth required)
+docker compose up -d
+
+# 3. Create the API keys and paste each "encoded" value into .env
+#    (see "Elasticsearch security" below)
+
+# 4. Ingest papers (cs.AI + cs.LG, last ~18 months)
 python -m src.ingest
 
-# 4. Ask questions
+# 5. Ask questions
 python -m src.rag "What are recent approaches to reducing LLM hallucination?"
 
 # ...or launch the web UI instead
 streamlit run app.py
 ```
+
+### Elasticsearch security
+
+Elasticsearch listens on `127.0.0.1:9200` only and requires authentication.
+The `elastic` admin password (`ELASTIC_PASSWORD`) is only used to create two
+least-privilege API keys, so the app never holds admin credentials:
+
+```bash
+set -a; source .env; set +a   # load ELASTIC_PASSWORD into the shell
+
+# Read-only key for the CLI, web UI, and eval -> ES_API_KEY
+curl -s -u "elastic:$ELASTIC_PASSWORD" -X POST localhost:9200/_security/api_key \
+  -H 'Content-Type: application/json' -d '{
+    "name": "arxiv-qa-read",
+    "role_descriptors": {"read": {"indices": [
+      {"names": ["arxiv_papers"], "privileges": ["read", "view_index_metadata"]}]}}}'
+
+# Write key for ingestion -> ES_INGEST_API_KEY
+curl -s -u "elastic:$ELASTIC_PASSWORD" -X POST localhost:9200/_security/api_key \
+  -H 'Content-Type: application/json' -d '{
+    "name": "arxiv-qa-ingest",
+    "role_descriptors": {"ingest": {"indices": [
+      {"names": ["arxiv_papers"], "privileges": ["all"]}]}}}'
+```
+
+Each response contains an `"encoded"` value; put it in `.env`. If you change
+`ES_INDEX`, use that name in `names` instead. HTTP traffic is not encrypted
+(TLS is off), which is fine over localhost; enable `xpack.security.http.ssl`
+before running ES on another host.
 
 ## Web UI
 
