@@ -66,6 +66,7 @@ Current state:
 - [x] Streamlit web UI
 - [x] Elasticsearch secured: localhost bind + read/write API keys (#6)
 - [x] CI: ruff + pytest on Python 3.11
+- [x] Kibana in docker compose for index observability (#19)
 
 Next up:
 - [ ] Chunking for full-text papers (currently abstract-only)

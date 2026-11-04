@@ -143,6 +143,25 @@ Pass `--refresh` to force a fresh fetch:
 python -m src.ingest --refresh
 ```
 
+## Kibana (optional)
+
+`docker compose up -d` also starts Kibana at `http://localhost:5601`, handy for
+inspecting the index: spot-checking papers in Discover, trying queries in Dev
+Tools, and charting coverage by date or category.
+
+- Set `KIBANA_PASSWORD` in `.env` (compose refuses to start without it), then
+  give the built-in `kibana_system` user that password:
+  ```bash
+  set -a; source .env; set +a
+  curl -s -u "elastic:$ELASTIC_PASSWORD" -X POST localhost:9200/_security/user/kibana_system/_password \
+    -H 'Content-Type: application/json' -d "{\"password\":\"$KIBANA_PASSWORD\"}"
+  ```
+- Log in to Kibana as `elastic` with `ELASTIC_PASSWORD`. `kibana_system` is only
+  Kibana's own connection to Elasticsearch and can't open the UI.
+- Create a data view on `arxiv_papers` with `published` as the time field.
+
+![Kibana dashboard: papers by category and per day](docs/kibana-dashboard.png)
+
 ## Tests
 
 ```bash

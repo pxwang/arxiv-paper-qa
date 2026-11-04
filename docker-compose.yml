@@ -20,5 +20,18 @@ services:
       timeout: 5s
       retries: 10
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: arxiv-qa-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:?set KIBANA_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   es-data:
